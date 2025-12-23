@@ -10,12 +10,8 @@ class TaskRequest(BaseModel):
 class CreateUserRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr  # Validates email format
-    password: str = Field(min_length=6)  # Minimum password length for security
+    password: str = Field(min_length=6)
 
 class Token(BaseModel):
     access_token: str
     token_type: str
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-    id: Optional[int] = None
