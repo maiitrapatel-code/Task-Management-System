@@ -46,13 +46,24 @@ uvicorn main:app --reload --port 8000
 Run all tests:
 ```bash
 cd TaskApp
-pytest test/ -v
+PYTHONPATH=. pytest test/ -v
 ```
 
 Run specific test file:
 ```bash
-pytest test/test_auth.py -v
-pytest test/test_tasks.py -v
+PYTHONPATH=. pytest test/test_auth.py -v
+PYTHONPATH=. pytest test/test_tasks.py -v
+```
+
+**Windows users:**
+```bash
+# Command Prompt
+set PYTHONPATH=.
+pytest test/ -v
+
+# PowerShell
+$env:PYTHONPATH="."
+pytest test/ -v
 ```
 
 ## Database

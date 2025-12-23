@@ -110,8 +110,10 @@ Once running, view the interactive API docs at:
 
 ```bash
 cd Backend/TaskApp
-pytest test/ -v
+PYTHONPATH=. pytest test/ -v
 ```
+
+**On Windows:** Use `set PYTHONPATH=.` before running pytest
 
 ### API Endpoints
 

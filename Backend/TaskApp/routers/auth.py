@@ -6,7 +6,7 @@ if not hasattr(bcrypt, "__about__"):
 # -------------------------------------
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -21,29 +21,30 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 
-# Reverted to standard configuration
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/login')
 
-def authenticate_user(username: str, password: str, db: Session):
+def authenticate_user(username: str, password: str, db: Session) -> Union[Users, bool]:
     user = db.query(Users).filter(Users.username == username).first()
     if not user:
         return False
-    if not bcrypt_context.verify(password, user.hashed_password):
+    # Cast to str to satisfy type checker
+    hashed_pw: str = str(user.hashed_password)
+    if not bcrypt_context.verify(password, hashed_pw):
         return False
     return user
 
-def create_access_token(username: str, user_id: int, expires_delta: timedelta):
+def create_access_token(username: str, user_id: int, expires_delta: timedelta) -> str:
     encode = {'sub': username, 'id': user_id}
     expires = datetime.now(timezone.utc) + expires_delta
     encode.update({'exp': expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get('sub')
-        user_id: int = payload.get('id')
+        username: Optional[str] = payload.get('sub')
+        user_id: Optional[int] = payload.get('id')
         if username is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
                                 detail='Could not validate user.')
@@ -76,19 +77,22 @@ async def create_user(db: Annotated[Session, Depends(get_db)],
     db.commit()
     return {"message": "User created successfully"}
 
+
 @router.post("/login", response_model=Token)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                  db: Annotated[Session, Depends(get_db)]):
     user = authenticate_user(form_data.username, form_data.password, db)
-    if not user:
+    if not user or isinstance(user, bool):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
                             detail='Invalid username or password.')
-    token = create_access_token(user.username, user.id, timedelta(minutes=20))
+    # Extract values to satisfy type checker
+    username_val: str = getattr(user, 'username')
+    user_id_val: int = getattr(user, 'id')
+    token = create_access_token(username_val, user_id_val, timedelta(minutes=20))
     return {'access_token': token, 'token_type': 'bearer'}
+
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(user: Annotated[dict, Depends(get_current_user)]):
-    # In a stateless JWT system, the client removes the token from storage
-    # For production, consider implementing token blacklisting
     return {"message": "Successfully logged out"}

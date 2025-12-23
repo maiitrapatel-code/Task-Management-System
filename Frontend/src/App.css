@@ -388,6 +388,20 @@
   color: #666;
 }
 
+/* Checkbox Styling */
+.form-group label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.form-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 10px;
+  cursor: pointer;
+  transform: scale(1.2);
+}
+
 /* Loading */
 .loading {
   text-align: center;
